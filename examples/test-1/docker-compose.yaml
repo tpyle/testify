@@ -1,0 +1,12 @@
+version: "3"
+
+services:
+  service-1:
+    image: mendhak/http-https-echo:31
+    ports:
+    - "8080"
+
+  service-2:
+    image: mendhak/http-https-echo:31
+    ports:
+    - "8080"

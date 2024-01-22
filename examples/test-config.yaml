@@ -1,0 +1,29 @@
+tests:
+- name: test-1
+  setup:
+    type: docker-compose
+    files:
+    - ./test-1/docker-compose.yaml
+    - ./test-1/docker-compose.test-1.yaml
+    services:
+      - service-1
+  readyChecks:
+  - type: httpGet
+    url: http://localhost:{{ .Setup.Services.Service-1.Ports.8080 }}/health
+    status: 200
+    timeout: 60s
+    requestTimeout: 5s
+    interval: 5s
+  runner:
+    type: postman
+    collections:
+    - collectionFile: ./test-1/collection.postman_collection.json
+      environmentFile: ./test-1/environment.json
+      environmentOverrides:
+      - key: port
+        value: {{ .Setup.Services.Service-1.Ports.8080 }}
+  exporters:
+  - type: junit
+    file: ./test-1/results.xml
+  - type: json
+    file: ./test-1/results.json
