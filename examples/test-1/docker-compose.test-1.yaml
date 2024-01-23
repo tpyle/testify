@@ -1,0 +1,6 @@
+version: "3"
+
+services:
+  service-1:
+    environment:
+      - SERVICE_1_ENV_VAR=1
