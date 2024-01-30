@@ -3,7 +3,7 @@ package types
 import (
 	"io"
 
-	"github.com/tpyle/testify/lib/types/result"
+	"github.com/tpyle/testamint/lib/types/result"
 )
 
 type Setup interface {

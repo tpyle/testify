@@ -1,7 +1,7 @@
 package runner
 
 import (
-	"github.com/tpyle/testify/lib/types/result"
+	"github.com/tpyle/testamint/lib/types/result"
 )
 
 type PostmanCollection struct {

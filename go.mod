@@ -1,9 +1,9 @@
-module github.com/tpyle/testify
+module github.com/tpyle/testamint
 
 go 1.21.6
 
 require (
-	github.com/google/uuid v1.5.0
+	github.com/google/uuid v1.6.0
 	github.com/sirupsen/logrus v1.9.3
 )
 
