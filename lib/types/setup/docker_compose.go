@@ -1,24 +1,90 @@
 package setup
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/google/uuid"
 )
 
+// URL represents the URL (address) of the published port.
+// TargetPort represents the target port of the published port (in the container).
+// PublishedPort represents the published port number (on the host).
+// Protocol represents the protocol used for the published port (e.g. tcp/udp).
+type DockerComposePublishedPort struct {
+	URL           string `json:"URL"`
+	TargetPort    int    `json:"TargetPort"`
+	PublishedPort int    `json:"publishedPort"`
+	Protocol      string `json:"Protocol"`
+}
+
+// DockerComposeContainerContext represents the context of a container in a docker compose setup.
+// Networks represents the networks the container is connected to.
+// ID represents the ID of the container.
+// Image represents the image of the container.
+// Name represents the name of the container.
+// Service represents the service the container belongs to.
+// PublishedPorts represents the published ports of the container.
 type DockerComposeContainerContext struct {
-	Networks       []string          `json:"networks"`
-	ID             string            `json:"id"`
-	Image          string            `json:"image"`
-	Name           string            `json:"name"`
-	PublishedPorts map[string]string `json:"published_ports"`
+	Networks       []string                              `json:"-"`
+	ID             string                                `json:"ID"`
+	Image          string                                `json:"Image"`
+	Name           string                                `json:"Name"`
+	Service        string                                `json:"Service"`
+	PublishedPorts map[string]DockerComposePublishedPort `json:"-"`
+}
+
+func (d *DockerComposeContainerContext) UnmarshalJSON(data []byte) error {
+	type auxS struct {
+		Networks   string                       `json:"Networks"`
+		ID         string                       `json:"ID"`
+		Image      string                       `json:"Image"`
+		Name       string                       `json:"Name"`
+		Service    string                       `json:"Service"`
+		Publishers []DockerComposePublishedPort `json:"Publishers"`
+	}
+	var aux auxS
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	// Parse and trim the networks
+	d.Networks = strings.Split(aux.Networks, ",")
+	for i, v := range d.Networks {
+		d.Networks[i] = strings.TrimSpace(v)
+	}
+
+	// Parse and trim the published ports
+	d.PublishedPorts = make(map[string]DockerComposePublishedPort)
+	for _, v := range aux.Publishers {
+		stringTargetPort := fmt.Sprintf("%d", v.TargetPort)
+		d.PublishedPorts[stringTargetPort] = v
+	}
+
+	d.ID = aux.ID
+	d.Image = aux.Image
+	d.Name = aux.Name
+	d.Service = aux.Service
+
+	return nil
 }
 
 type DockerComposeContext struct {
-	Networks []string `json:"networks"`
+	Containers map[string]*DockerComposeContainerContext `json:"containers"`
+}
+
+func NewDockerComposeContext() DockerComposeContext {
+	return DockerComposeContext{
+		Containers: make(map[string]*DockerComposeContainerContext),
+	}
+}
+
+func (d *DockerComposeContext) AddContainer(name string, container *DockerComposeContainerContext) {
+	d.Containers[name] = container
 }
 
 type DockerComposeSetup struct {
@@ -77,9 +143,7 @@ func (d *DockerComposeSetup) generateBaseCommand() []string {
 func (d *DockerComposeSetup) generateUpCommand() []string {
 	args_slice := d.generateBaseCommand()
 	args_slice = append(args_slice, "up", "-d")
-	for _, v := range d.Services {
-		args_slice = append(args_slice, v)
-	}
+	args_slice = append(args_slice, d.Services...)
 	return args_slice
 }
 
@@ -89,7 +153,44 @@ func (d *DockerComposeSetup) generateDownCommand() []string {
 	return args_slice
 }
 
-func (d *DockerComposeSetup) Setup(context map[string]string, logFile *io.Writer) (interface{}, error) {
+func (d *DockerComposeSetup) generatePsCommand() []string {
+	args_slice := d.generateBaseCommand()
+	args_slice = append(args_slice, "ps", "--format", "json")
+	return args_slice
+}
+
+func (d *DockerComposeSetup) GetContext() (interface{}, error) {
+	args_slice := d.generatePsCommand()
+
+	cmd := exec.Command(args_slice[0], args_slice[1:]...)
+
+	cmd.Env = os.Environ()
+
+	out, err := cmd.Output()
+
+	if err != nil {
+		return nil, fmt.Errorf("error running docker compose: %w", err)
+	}
+
+	dockerContext := NewDockerComposeContext()
+
+	//Loop over output lines
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		container := &DockerComposeContainerContext{}
+		if err := json.Unmarshal([]byte(line), container); err != nil {
+			return nil, fmt.Errorf("error unmarshalling docker compose output: %w", err)
+		}
+		dockerContext.AddContainer(container.Name, container)
+	}
+
+	return dockerContext, nil
+}
+
+func (d *DockerComposeSetup) Setup(ctx map[string]string, logFile *io.Writer) (interface{}, error) {
 	args_slice := d.generateUpCommand()
 	cmd := exec.Command(args_slice[0], args_slice[1:]...)
 
@@ -103,9 +204,20 @@ func (d *DockerComposeSetup) Setup(context map[string]string, logFile *io.Writer
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("error running docker compose: %w", err)
 	}
-	return nil, nil
+
+	return d.GetContext()
 }
 
-func (d *DockerComposeSetup) Teardown() error {
+func (d *DockerComposeSetup) Teardown(logFile *io.Writer) error {
+	args_slice := d.generateDownCommand()
+	cmd := exec.Command(args_slice[0], args_slice[1:]...)
+
+	cmd.Env = os.Environ()
+	cmd.Stdout = *logFile
+	cmd.Stderr = *logFile
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("error running docker compose: %w", err)
+	}
 	return nil
 }
