@@ -27,49 +27,49 @@ tests:
         environmentFile: ./test-1/environment.json
         environmentOverrides:
           - key: port
-            value: {{ .Setup.Services.service-1.Ports.8080 }}
+            value: "{{ .Setup.Services.service-1.Ports.8080 }}"
 
   exporters:
     - type: junit
       file: ./test-1/results.xml
     - type: json
       file: ./test-1/results.json
-- name: test-2
-  setup:
-    type: none
+# - name: test-2
+#   setup:
+#     type: none
 
-  readyChecks: []
+#   readyChecks: []
 
-  runner:
-    type: gradle
-    workingDirectory: ./test-2
-    includedTasks:
-      - test
-      - integrationTest
-    excludedTasks:
-      - anExample
+#   runner:
+#     type: gradle
+#     workingDirectory: ./test-2
+#     includedTasks:
+#       - test
+#       - integrationTest
+#     excludedTasks:
+#       - anExample
 
-  exporters:
-    - type: junit
-      file: ./test-1/results.xml
-    - type: json
-      file: ./test-1/results.json
-- name: test-3
-  setup:
-    type: none
+#   exporters:
+#     - type: junit
+#       file: ./test-1/results.xml
+#     - type: json
+#       file: ./test-1/results.json
+# - name: test-3
+#   setup:
+#     type: none
 
-  readyChecks: []
+#   readyChecks: []
 
-  runner:
-    type: go
-    workingDirectory: ./test-3
-    includedPackages:
-      - ./...
-    excludedPackages:
-      - ./vendor/...
+#   runner:
+#     type: go
+#     workingDirectory: ./test-3
+#     includedPackages:
+#       - ./...
+#     excludedPackages:
+#       - ./vendor/...
 
-  exporters:
-    - type: junit
-      file: ./test-1/results.xml
-    - type: json
-      file: ./test-1/results.json
+#   exporters:
+#     - type: junit
+#       file: ./test-1/results.xml
+#     - type: json
+#       file: ./test-1/results.json

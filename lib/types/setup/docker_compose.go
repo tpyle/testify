@@ -87,12 +87,17 @@ func (d *DockerComposeContext) AddContainer(name string, container *DockerCompos
 	d.Containers[name] = container
 }
 
+type EnvEntry struct {
+	Key string `json:"key"`
+	Val string `json:"value"`
+}
+
 type DockerComposeSetup struct {
-	projectName string            `json:"-"`
-	Files       []string          `json:"files"`
-	Services    []string          `json:"services"`
-	EnvFile     string            `json:"env_file"`
-	ExtraEnv    map[string]string `json:"extra_env"`
+	projectName string     `json:"-"`
+	Files       []string   `json:"files"`
+	Services    []string   `json:"services"`
+	EnvFile     string     `json:"env_file"`
+	ExtraEnv    []EnvEntry `json:"extra_env"`
 }
 
 func (d *DockerComposeSetup) GetProjectName() string {
@@ -190,16 +195,16 @@ func (d *DockerComposeSetup) GetContext() (interface{}, error) {
 	return dockerContext, nil
 }
 
-func (d *DockerComposeSetup) Setup(ctx map[string]string, logFile *io.Writer) (interface{}, error) {
+func (d *DockerComposeSetup) Setup(ctx map[string]string, logFile io.Writer) (interface{}, error) {
 	args_slice := d.generateUpCommand()
 	cmd := exec.Command(args_slice[0], args_slice[1:]...)
 
 	cmd.Env = os.Environ()
-	for k, v := range d.ExtraEnv {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
+	for _, envEntry := range d.ExtraEnv {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", envEntry.Key, envEntry.Val))
 	}
-	cmd.Stdout = *logFile
-	cmd.Stderr = *logFile
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
 
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("error running docker compose: %w", err)
@@ -208,13 +213,13 @@ func (d *DockerComposeSetup) Setup(ctx map[string]string, logFile *io.Writer) (i
 	return d.GetContext()
 }
 
-func (d *DockerComposeSetup) Teardown(logFile *io.Writer) error {
+func (d *DockerComposeSetup) Teardown(logFile io.Writer) error {
 	args_slice := d.generateDownCommand()
 	cmd := exec.Command(args_slice[0], args_slice[1:]...)
 
 	cmd.Env = os.Environ()
-	cmd.Stdout = *logFile
-	cmd.Stderr = *logFile
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("error running docker compose: %w", err)

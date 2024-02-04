@@ -6,12 +6,6 @@ import (
 	"github.com/tpyle/testamint/lib/types/result"
 )
 
-type Setup interface {
-	Validate() error
-	Setup(context map[string]string, logFile *io.Writer) (interface{}, error)
-	Teardown() error
-}
-
 type ReadyCheck interface {
 	Validate() error
 	WaitForReady(context interface{}, logFile *io.Writer) error
