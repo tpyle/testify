@@ -54,6 +54,11 @@ func main() {
 
 		fmt.Printf("%+v\n", setupContext)
 
+		err = test.Setup.Teardown(os.Stdout)
+		if err != nil {
+			panic(err)
+		}
+
 		// fmt.Printf("%s\n", test.Setup)
 
 	}

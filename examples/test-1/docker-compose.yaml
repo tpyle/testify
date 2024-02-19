@@ -18,6 +18,4 @@ services:
 
 networks:
   default:
-    name: my-network
   other:
-    name: other-network
