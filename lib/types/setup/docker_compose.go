@@ -96,8 +96,12 @@ type DockerComposeSetup struct {
 	projectName string     `json:"-"`
 	Files       []string   `json:"files"`
 	Services    []string   `json:"services"`
-	EnvFile     string     `json:"env_file"`
-	ExtraEnv    []EnvEntry `json:"extra_env"`
+	EnvFile     string     `json:"envFile"`
+	ExtraEnv    []EnvEntry `json:"extraEnv"`
+
+	DockerPath    string `json:"dockerPath"`
+	UseComposeV1  bool   `json:"useComposeV1"`
+	ComposeV1Path string `json:"composeV1Path"`
 }
 
 func (d *DockerComposeSetup) GetProjectName() string {
@@ -111,7 +115,7 @@ func (d *DockerComposeSetup) GetProjectName() string {
 // In this case, it checks that docker is present, as is `docker compose`, the
 // files exist relative to the working directory, and the services exist in the
 // compose files
-func (d *DockerComposeSetup) Validate() error {
+func (d *DockerComposeSetup) Validate(context interface{}, logFile io.Writer) error {
 	path, err := exec.LookPath("docker")
 	if err != nil {
 		return fmt.Errorf("docker not found in path: %w", err)
@@ -189,13 +193,13 @@ func (d *DockerComposeSetup) GetContext() (interface{}, error) {
 		if err := json.Unmarshal([]byte(line), container); err != nil {
 			return nil, fmt.Errorf("error unmarshalling docker compose output: %w", err)
 		}
-		dockerContext.AddContainer(container.Name, container)
+		dockerContext.AddContainer(container.Service, container)
 	}
 
 	return dockerContext, nil
 }
 
-func (d *DockerComposeSetup) Setup(ctx map[string]string, logFile io.Writer) (interface{}, error) {
+func (d *DockerComposeSetup) Setup(context interface{}, logFile io.Writer) (interface{}, error) {
 	args_slice := d.generateUpCommand()
 	cmd := exec.Command(args_slice[0], args_slice[1:]...)
 

@@ -12,6 +12,7 @@ import (
 
 func main() {
 	fileName := "./examples/test-config.yaml"
+	logrus.SetLevel(logrus.DebugLevel)
 
 	body, err := os.ReadFile(fileName)
 	if err != nil {
@@ -46,28 +47,11 @@ func main() {
 		for _, readyCheck := range test.ReadyChecks {
 			fmt.Printf("%+v\n", readyCheck)
 		}
-		// fmt.Printf("%s\n", test.Runner)
 
-		err = test.Setup.Validate()
+		results, err := test.Run(os.Stdout)
 		if err != nil {
-			logrus.WithError(err).Fatal("Invalid Setup")
+			logrus.WithError(err).Fatal("Failed to run test")
 		}
-
-		// setupContext, err := test.Setup.Setup(nil, os.Stdout)
-		// if err != nil {
-		// 	logrus.WithError(err).Fatal("Failed to setup environment")
-		// }
-
-		// fmt.Printf("%+v\n", setupContext)
-
-		// fmt.Printf("%+v\n", test.ReadyChecks[0].Validate(setupContext, os.Stdout))
-
-		// err = test.Setup.Teardown(os.Stdout)
-		// if err != nil {
-		// 	logrus.WithError(err).Fatal("Failed to teardown setup")
-		// }
-
-		// fmt.Printf("%s\n", test.Setup)
-
+		fmt.Printf("%+v\n", results)
 	}
 }

@@ -7,8 +7,8 @@ import (
 )
 
 type Setup interface {
-	Validate() error
-	Setup(context map[string]string, logFile io.Writer) (interface{}, error)
+	Validate(context interface{}, logFile io.Writer) error
+	Setup(context interface{}, logFile io.Writer) (interface{}, error)
 	Teardown(logFile io.Writer) error
 }
 

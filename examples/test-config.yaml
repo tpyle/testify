@@ -1,3 +1,4 @@
+parallelization: 1
 tests:
 - name: test-1
   setup:
@@ -7,14 +8,14 @@ tests:
       - ./test-1/docker-compose.test-1.yaml
     services:
       - service-1
-    env_file: ./test-1/.env
-    extra_env:
+    envFile: ./test-1/.env
+    extraEnv:
       - key: HTTP_PORT
         value: "8080"
 
   readyChecks:
     - type: httpGet
-      url: http://localhost:{{ .Setup.Services.service-1.Ports.8080 }}/health
+      url: http://localhost:{{ (index (index .Setup.Containers "service-1" ).PublishedPorts "8080").PublishedPort }}/health
       status: 200
       timeout: 60s
       requestTimeout: 5s

@@ -11,6 +11,10 @@
 
 	"mounts": [
 		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.config/gh,target=/home/vscode/.config/gh,type=bind"
+	],
+
+	"runArgs": [
+		"--network=host"
 	]
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
