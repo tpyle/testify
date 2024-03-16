@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/tpyle/testamint/lib/types/check"
 	"github.com/tpyle/testamint/lib/types/setup"
 )
 
@@ -12,16 +13,17 @@ type TestConfig struct {
 }
 
 type Test struct {
-	Name  string      `json:"name"`
-	Setup setup.Setup `json:"setup"`
-	// ReadyChecks []ReadyCheck `json:"readyChecks"`
+	Name        string        `json:"name"`
+	Setup       setup.Setup   `json:"setup"`
+	ReadyChecks []check.Check `json:"readyChecks"`
 	// Runner      Runner       `json:"runner"`
 }
 
 func (t *Test) UnmarshalJSON(data []byte) error {
 	type Aux struct {
-		Name  string          `json:"name"`
-		Setup json.RawMessage `json:"setup"`
+		Name        string            `json:"name"`
+		Setup       json.RawMessage   `json:"setup"`
+		ReadyChecks []json.RawMessage `json:"readyChecks"`
 	}
 
 	var aux Aux
@@ -39,6 +41,16 @@ func (t *Test) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
+
+	var checks []check.Check
+	for _, rc := range aux.ReadyChecks {
+		c, err := check.UnmarshalCheck(rc)
+		if err != nil {
+			return err
+		}
+		checks = append(checks, c)
+	}
+	t.ReadyChecks = checks
 
 	return nil
 }

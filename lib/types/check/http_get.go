@@ -5,8 +5,8 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
-	"net/url"
 	"text/template"
 	"time"
 
@@ -22,7 +22,7 @@ const (
 
 type HttpGetReadyCheck struct {
 	client         *http.Client  `json:"-"`
-	Url            *url.URL      `json:"url"`
+	Url            string        `json:"url"`
 	StatusCode     int           `json:"status"`
 	Timeout        time.Duration `json:"timeout"`
 	RequestTimeout time.Duration `json:"request_timeout"`
@@ -30,35 +30,39 @@ type HttpGetReadyCheck struct {
 }
 
 func (h *HttpGetReadyCheck) UnmarshalJSON(data []byte) error {
-	type Alias HttpGetReadyCheck
-	aux := &struct {
-		*Alias
-		Url string `json:"url"`
-	}{Alias: (*Alias)(h)}
+	type auxH struct {
+		Url            string `json:"url"`
+		StatusCode     int    `json:"status"`
+		Timeout        string `json:"timeout"`
+		Interval       string `json:"interval"`
+		RequestTimeout string `json:"request_timeout"`
+	}
+	var aux auxH
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
 	var err error
-	h.Url, err = url.Parse(aux.Url)
+	h.Url = aux.Url
+	if aux.Interval == "" {
+		aux.Interval = DEFAULT_INTERVAL.String()
+	}
+	h.Interval, err = time.ParseDuration(aux.Interval)
 	if err != nil {
 		return err
 	}
-
-	if h.Interval == 0 {
-		logrus.Debugf("Interval not set, using default %s", DEFAULT_INTERVAL)
-		h.Interval = DEFAULT_INTERVAL
+	if aux.Timeout == "" {
+		aux.Timeout = MAX_TIMEOUT.String()
 	}
-	if h.Timeout == 0 {
-		logrus.Debugf("Timeout not set, using default %s", MAX_TIMEOUT)
-		h.Timeout = MAX_TIMEOUT
+	h.Timeout, err = time.ParseDuration(aux.Timeout)
+	if err != nil {
+		return err
 	}
-	if h.Timeout > MAX_TIMEOUT {
-		logrus.Warnf("Timeout %s is greater than max timeout %s, using max timeout", h.Timeout, MAX_TIMEOUT)
-		h.Timeout = MAX_TIMEOUT
+	if aux.RequestTimeout == "" {
+		aux.RequestTimeout = DEFAULT_REQUEST_TIMEOUT.String()
 	}
-	if h.RequestTimeout == 0 {
-		logrus.Debugf("RequestTimeout not set, using default %s", DEFAULT_REQUEST_TIMEOUT)
-		h.RequestTimeout = DEFAULT_REQUEST_TIMEOUT
+	h.RequestTimeout, err = time.ParseDuration(aux.RequestTimeout)
+	if err != nil {
+		return err
 	}
 
 	h.client = &http.Client{
@@ -72,7 +76,7 @@ func (h *HttpGetReadyCheck) UnmarshalJSON(data []byte) error {
 }
 
 func (h *HttpGetReadyCheck) RenderUrl(context interface{}) (string, error) {
-	tmpl, err := template.New("url").Parse(h.Url.String())
+	tmpl, err := template.New("url").Parse(h.Url)
 	if err != nil {
 		return "", err
 	}
@@ -86,12 +90,18 @@ func (h *HttpGetReadyCheck) RenderUrl(context interface{}) (string, error) {
 }
 
 // Validate ensures the setup is appropriate for the test context
-// In this case, httpGet has no dependencies, so it's always valid
-func (h *HttpGetReadyCheck) Validate() error {
+func (h *HttpGetReadyCheck) Validate(context interface{}, logFile io.Writer) error {
+	fmt.Printf("Validating http get ready check\n")
+	fmt.Printf("%+v\n", context)
+	_, err := h.RenderUrl(context)
+	fmt.Printf("Rendered url: %s\n", h.Url)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func (h *HttpGetReadyCheck) WaitForReady(context interface{}) error {
+func (h *HttpGetReadyCheck) WaitForReady(context interface{}, logFile io.Writer) error {
 	renderedUrl, err := h.RenderUrl(context)
 	if err != nil {
 		return err
@@ -101,12 +111,13 @@ func (h *HttpGetReadyCheck) WaitForReady(context interface{}) error {
 	for time.Now().Before(endTime) {
 		resp, err := h.client.Get(renderedUrl)
 		if err != nil {
-			return err
+			logrus.WithError(err).Debugf("Error getting %s", renderedUrl)
 		}
 		if resp.StatusCode == h.StatusCode {
+			logrus.Infof("Got %s with status %d", renderedUrl, h.StatusCode)
 			return nil
 		}
 		time.Sleep(h.Interval)
 	}
-	return fmt.Errorf("timed out waiting for %s to return %d", h.Url.String(), h.StatusCode)
+	return fmt.Errorf("timed out waiting for %s to return %d", renderedUrl, h.StatusCode)
 }

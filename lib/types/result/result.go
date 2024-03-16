@@ -12,8 +12,9 @@ const (
 
 type Result struct {
 	Name      string        `json:"name"`
-	Status    string        `json:"status"`
+	Status    TestStatus    `json:"status"`
 	Error     string        `json:"error"`
+	Details   string        `json:"details"`
 	StartTime time.Time     `json:"startTime"`
 	EndTime   time.Time     `json:"endTime"`
 	Duration  time.Duration `json:"duration"`

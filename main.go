@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/sirupsen/logrus"
 	"github.com/tpyle/testamint/lib/types"
 	"sigs.k8s.io/yaml"
 )
@@ -40,24 +41,31 @@ func main() {
 
 	for _, test := range config.Tests {
 
-		fmt.Printf("%s\n", test.Name)
+		fmt.Printf("%+v\n", test)
+		fmt.Printf("%+v\n", test.Setup)
+		for _, readyCheck := range test.ReadyChecks {
+			fmt.Printf("%+v\n", readyCheck)
+		}
+		// fmt.Printf("%s\n", test.Runner)
 
 		err = test.Setup.Validate()
 		if err != nil {
-			panic(err)
+			logrus.WithError(err).Fatal("Invalid Setup")
 		}
 
-		setupContext, err := test.Setup.Setup(nil, os.Stdout)
-		if err != nil {
-			panic(err)
-		}
+		// setupContext, err := test.Setup.Setup(nil, os.Stdout)
+		// if err != nil {
+		// 	logrus.WithError(err).Fatal("Failed to setup environment")
+		// }
 
-		fmt.Printf("%+v\n", setupContext)
+		// fmt.Printf("%+v\n", setupContext)
 
-		err = test.Setup.Teardown(os.Stdout)
-		if err != nil {
-			panic(err)
-		}
+		// fmt.Printf("%+v\n", test.ReadyChecks[0].Validate(setupContext, os.Stdout))
+
+		// err = test.Setup.Teardown(os.Stdout)
+		// if err != nil {
+		// 	logrus.WithError(err).Fatal("Failed to teardown setup")
+		// }
 
 		// fmt.Printf("%s\n", test.Setup)
 

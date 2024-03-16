@@ -73,3 +73,29 @@ tests:
 #       file: ./test-1/results.xml
 #     - type: json
 #       file: ./test-1/results.json
+
+  # - name: test-4
+  #   setup:
+  #     type: exec
+  #     commands:
+  #       - go run ./test-4/main.go
+  #       - command: echo hello
+  #         environment:
+  #         - key: FOO
+  #           value: bar
+
+  #   readyChecks: []
+
+  #   runner:
+  #     type: go
+  #     workingDirectory: ./test-4
+  #     includedPackages:
+  #       - ./...
+  #     excludedPackages:
+  #       - ./vendor/...
+
+  #   exporters:
+  #     - type: junit
+  #       file: ./test-4/results.xml
+  #     - type: json
+  #       file: ./test-4/results.json
