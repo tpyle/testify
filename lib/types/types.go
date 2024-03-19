@@ -7,6 +7,7 @@ import (
 
 	"github.com/tpyle/testamint/lib/types/check"
 	"github.com/tpyle/testamint/lib/types/result"
+	"github.com/tpyle/testamint/lib/types/runner"
 	"github.com/tpyle/testamint/lib/types/setup"
 )
 
@@ -19,6 +20,7 @@ type Test struct {
 	Name        string        `json:"name"`
 	Setup       setup.Setup   `json:"setup"`
 	ReadyChecks []check.Check `json:"readyChecks"`
+	Runner      runner.Runner `json:"runner"`
 	// Runner      Runner       `json:"runner"`
 }
 
@@ -30,13 +32,17 @@ type TestContext struct {
 func (t *Test) Validate(context interface{}, logFile io.Writer) error {
 	err := t.Setup.Validate(context, logFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("error in setup: %w", err)
 	}
 	for _, rc := range t.ReadyChecks {
 		err = rc.Validate(context, logFile)
 		if err != nil {
-			return err
+			return fmt.Errorf("error in readyCheck: %w", err)
 		}
+	}
+	err = t.Runner.Validate(context, logFile)
+	if err != nil {
+		return fmt.Errorf("error in runner: %w", err)
 	}
 	return nil
 }
@@ -55,12 +61,12 @@ func (t *Test) Run(logFile io.Writer) (*result.ResultGroup, error) {
 	defer t.Setup.Teardown(logFile)
 	context.Setup = setupContext
 
-	for k := range context.Setup.(setup.DockerComposeContext).Containers {
-		fmt.Printf("Container: %s\n", k)
-		fmt.Printf("Container: %+v\n", context.Setup.(setup.DockerComposeContext).Containers[k])
-	}
+	// for k := range context.Setup.(setup.DockerComposeContext).Containers {
+	// 	fmt.Printf("Container: %s\n", k)
+	// 	fmt.Printf("Container: %+v\n", context.Setup.(setup.DockerComposeContext).Containers[k])
+	// }
 
-	fmt.Printf("Total Context %+v\n", context)
+	// fmt.Printf("Total Context %+v\n", context)
 
 	for _, rc := range t.ReadyChecks {
 		err = rc.WaitForReady(context, logFile)
@@ -77,6 +83,7 @@ func (t *Test) UnmarshalJSON(data []byte) error {
 		Name        string            `json:"name"`
 		Setup       json.RawMessage   `json:"setup"`
 		ReadyChecks []json.RawMessage `json:"readyChecks"`
+		Runner      json.RawMessage   `json:"runner"`
 	}
 
 	var aux Aux
@@ -86,7 +93,7 @@ func (t *Test) UnmarshalJSON(data []byte) error {
 
 	t.Name = aux.Name
 	if aux.Setup == nil {
-		return fmt.Errorf("error: setup is required")
+		return fmt.Errorf("setup is required")
 	}
 
 	var err error
@@ -104,6 +111,15 @@ func (t *Test) UnmarshalJSON(data []byte) error {
 		checks = append(checks, c)
 	}
 	t.ReadyChecks = checks
+
+	if aux.Runner == nil {
+		return fmt.Errorf("runner is required")
+	}
+
+	t.Runner, err = runner.UnmarshalRunner(aux.Runner)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

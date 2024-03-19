@@ -42,11 +42,11 @@ func main() {
 
 	for _, test := range config.Tests {
 
-		fmt.Printf("%+v\n", test)
-		fmt.Printf("%+v\n", test.Setup)
-		for _, readyCheck := range test.ReadyChecks {
-			fmt.Printf("%+v\n", readyCheck)
-		}
+		// fmt.Printf("%+v\n", test)
+		// fmt.Printf("%+v\n", test.Setup)
+		// for _, readyCheck := range test.ReadyChecks {
+		// 	fmt.Printf("%+v\n", readyCheck)
+		// }
 
 		results, err := test.Run(os.Stdout)
 		if err != nil {
