@@ -8,4 +8,4 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
-require golang.org/x/sys v0.18.0 // indirect
+require golang.org/x/sys v0.26.0 // indirect
